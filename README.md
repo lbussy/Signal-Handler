@@ -2,26 +2,28 @@
 
 ## Overview
 
-SignalHandler is a C++ library designed to manage signal handling in applications. It provides a structured way to intercept system signals, execute user-defined callbacks, and handle graceful shutdown procedures.
+**SignalHandler** is a C++ library designed to manage POSIX signal handling in multi-threaded applications. It provides a dedicated thread to synchronously process signals, invoke custom callbacks, and enable structured and graceful shutdown procedures.
 
 ## Features
 
-- Registers and blocks signals such as SIGINT, SIGTERM, SIGQUIT, and others.
-- Allows custom callback functions for signal handling.
-- Provides a thread-safe shutdown request mechanism.
-- Ensures safe cleanup and resource management.
+- Centralized handling of signals like `SIGINT`, `SIGTERM`, `SIGQUIT`, and others.
+- Custom callback support with signal metadata (e.g., whether a signal is critical).
+- Dedicated signal-handling thread to avoid race conditions.
+- Thread-safe shutdown signaling using atomic flags and condition variables.
+- Terminal configuration control (e.g., disable `^C` echo).
+- Optional real-time priority adjustment for the signal-handling thread.
 
 ## Repository Structure
 
 ```text
-├── LICENSE.md          # License information
-├── .gitattributes      # Git attributes configuration
-├── .gitignore          # Git ignore rules
+├── LICENSE.md              # License information
+├── .gitattributes          # Git attributes configuration
+├── .gitignore              # Git ignore rules
 └── src/
-    ├── main.cpp        # Sample application
-    ├── Makefile        # Build script
-    ├── signal_handler.hpp # Header file for SignalHandler class
-    ├── signal_handler.cpp # Implementation of SignalHandler
+    ├── main.cpp            # Demonstration application using SignalHandler
+    ├── Makefile            # Build script
+    ├── signal_handler.hpp  # Header file for SignalHandler class
+    ├── signal_handler.cpp  # Implementation of SignalHandler
 ```
 
 ## Installation & Compilation
@@ -46,47 +48,67 @@ In your `main.cpp`, instantiate the `SignalHandler` and set a callback function.
 
 ```cpp
 #include "signal_handler.hpp"
+#include <iostream>
 
-std::unique_ptr<SignalHandler> handler;
+SignalHandler signalHandler;
 
 void custom_signal_handler(int signum, bool is_critical)
 {
+    std::cout << "Signal received: " << SignalHandler::signalToString(signum)
+              << (is_critical ? " (critical)." : " (non-critical).") << std::endl;
+
     if (is_critical)
     {
-        std::cerr << "Critical signal received: " << signum << ". Exiting immediately." << std::endl;
-        std::quick_exit(signum);
+        std::exit(EXIT_FAILURE);  // Immediate exit
     }
-    else
-    {
-        std::cout << "Signal received: " << signum << ". Initiating shutdown." << std::endl;
-        handler->request_shutdown();
-    }
+    // Set your application-specific shutdown flag here
 }
 
 int main()
 {
-    handler = std::make_unique<SignalHandler>();
-    handler->set_callback(custom_signal_handler);
-    handler->wait_for_shutdown();
+    block_signals();  // Block signals in all threads
+    signalHandler.setCallback(custom_signal_handler);
+    signalHandler.start();
+    signalHandler.setPriority(SCHED_RR, 10);  // Optional: requires CAP_SYS_NICE
+
+    // Application logic here
+
+    // On shutdown
+    signalHandler.stop();
     return 0;
 }
 ```
 
+### Thread Integration
+
+In multi-threaded applications, use condition variables or atomic flags to notify worker threads when a shutdown is requested, as demonstrated in main.cpp.
+
 ### Handling Signals
 
-By default, the SignalHandler manages these signals:
+The following signals are registered and blocked by default, and marked as "critical" as noted:
 
-- `SIGINT`
-- `SIGTERM`
-- `SIGQUIT`
-- `SIGHUP`
-- `SIGSEGV` (critical)
-- `SIGBUS` (critical)
-- `SIGFPE` (critical)
-- `SIGILL` (critical)
-- `SIGABRT` (critical)
+| Signal | Immediate Exit |
+| --- | --- |
+| `SIGINT` | ❌ |
+| `SIGTERM` | ❌ |
+| `SIGQUIT` | ❌ |
+| `SIGHUP` | ❌ |
+| `SIGUSR1` | ❌ |
+| `SIGSEGV` | ✅ |
+| `SIGBUS` | ✅ |
+| `SIGFPE` | ✅ |
+| `SIGILL` | ✅ |
+| `SIGABRT` | ✅ |
 
-If a critical signal is received, the application will terminate immediately. Otherwise, a shutdown process is initiated.
+If a critical signal is received and no callbacl is registered, the application will terminate immediately. Otherwise, the callback is responsible to properly handle the condition.
+
+## Method Summary
+
+- `void start()` – Starts the signal-handling thread.
+- `void setCallback(const std::function<void(int, bool)>& cb)` – Registers a custom callback.
+- `bool stop()` – Stops the thread and restores terminal settings.
+- `bool setPriority(int policy, int priority)` – Sets scheduling policy and priority.
+- `static std::string_view signalToString(int signum)` – Converts a signal to its name.
 
 ## License
 

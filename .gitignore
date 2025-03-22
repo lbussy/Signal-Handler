@@ -1,6 +1,7 @@
 # GitIgnore for Signal Handler
 signal_handler*.
 *_test
+build/
 
 ## General Rules
 .DS_Store
