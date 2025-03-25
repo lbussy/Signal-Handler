@@ -1,7 +1,7 @@
 /**
  * @file signal_handler.hpp
- * @brief A C++ class to intercept common signals and use a callback to tak
- *        delioberatio actions.
+ * @brief A C++ class to intercept common signals and use a callback to take
+ *        deliberate actions.
  *
  * This software is distributed under the MIT License. See LICENSE.md for
  * details.

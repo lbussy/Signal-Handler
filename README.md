@@ -36,7 +36,7 @@ make
 
 To clean up the compiled files:
 
-```basg
+```bash
 make clean
 ```
 
@@ -97,10 +97,10 @@ The following signals are registered and blocked by default, and marked as "crit
 | `SIGSEGV` | ✅ |
 | `SIGBUS` | ✅ |
 | `SIGFPE` | ✅ |
-| `SIGILL` | ✅ |
+| `SIGKILL` | ✅ |
 | `SIGABRT` | ✅ |
 
-If a critical signal is received and no callbacl is registered, the application will terminate immediately. Otherwise, the callback is responsible to properly handle the condition.
+If a critical signal is received and no callback is registered, the application will terminate immediately. Otherwise, the callback is responsible to properly handle the condition.
 
 ## Method Summary
 
