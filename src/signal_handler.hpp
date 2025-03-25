@@ -151,17 +151,29 @@ public:
 
 private:
     /**
-     * @brief Internal function run by the signal handling thread.
-     * @details Waits on blocked signals and triggers callbacks or exits.
+     * @brief Worker thread that runs in the signal loop.
      */
-    void run();
+    std::thread worker_thread;
 
-    std::thread worker_thread;        ///< Worker thread that runs the signal loop.
-    std::atomic<bool> running;        ///< Indicates if the signal loop is active.
-    std::atomic<bool> stop_requested; ///< Flag used to break the signal wait loop.
-    std::atomic<bool> stopping;       ///< Suppresses callback on dummy signal during shutdown.
+    /**
+     * @brief Indicates if the signal loop is active.
+     * */
+    std::atomic<bool> running;
 
-    std::function<void(int, bool)> callback; ///< User-provided signal handler callback.
+    /**
+     * @brief Flag used to break the signal wait loop.
+     */
+    std::atomic<bool> stop_requested;
+
+    /**
+     * @brief Suppresses callback on dummy signal during shutdown.
+     */
+    std::atomic<bool> stopping;
+
+    /**
+     * @brief User-provided signal handler callback.
+     */
+    std::function<void(int, bool)> callback;
 
     /**
      * @brief Original terminal settings for STDIN.
@@ -178,6 +190,12 @@ private:
      * @brief Set of signals to wait on (built from signal_map).
      */
     sigset_t signal_set;
+
+    /**
+     * @brief Internal function run by the signal handling thread.
+     * @details Waits on blocked signals and triggers callbacks or exits.
+     */
+    void run();
 };
 
 #endif // SIGNAL_HANDLER_HPP

@@ -151,11 +151,29 @@ void block_signals()
  * If `pthread_sigmask()` fails, signals may not be properly blocked.
  */
 SignalHandler::SignalHandler()
-    : running(true),
+    : running(false),
       stop_requested(false),
       stopping(false),
       termios_saved(false)
 {
+}
+
+/**
+ * @brief Starts the signal handling worker thread.
+ *
+ * @details
+ * Launches a new thread that runs the `SignalHandler::run()` method.
+ * This thread is responsible for synchronously waiting on the signal set
+ * defined in the constructor and responding accordingly.
+ *
+ * @note
+ * This method should only be called once per instance. Calling it multiple
+ * times without joining the previous thread may lead to undefined behavior.
+ */
+void SignalHandler::start()
+{
+    running.store(true);
+
     // Save current terminal settings for STDIN (file descriptor 0)
     if (tcgetattr(STDIN_FILENO, &original_termios) == 0)
     {
@@ -196,22 +214,7 @@ SignalHandler::SignalHandler()
         perror("pthread_sigmask");
 #endif
     }
-}
 
-/**
- * @brief Starts the signal handling worker thread.
- *
- * @details
- * Launches a new thread that runs the `SignalHandler::run()` method.
- * This thread is responsible for synchronously waiting on the signal set
- * defined in the constructor and responding accordingly.
- *
- * @note
- * This method should only be called once per instance. Calling it multiple
- * times without joining the previous thread may lead to undefined behavior.
- */
-void SignalHandler::start()
-{
     // Start the signal handling thread explicitly
     worker_thread = std::thread(&SignalHandler::run, this);
 }
