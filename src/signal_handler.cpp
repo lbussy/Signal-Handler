@@ -66,7 +66,7 @@
  * @note This map is a static member of the SignalHandler class.
  */
 const std::unordered_map<int, std::pair<std::string_view, bool>> SignalHandler::signal_map = {
-    {SIGUSR1, {"SIGUSR1", false}},
+    //{SIGUSR1, {"SIGUSR1", false}},
     {SIGINT, {"SIGINT", false}},
     {SIGTERM, {"SIGTERM", false}},
     {SIGQUIT, {"SIGQUIT", false}},
@@ -441,15 +441,19 @@ void SignalHandler::run()
             break;
         }
 
-        // Determine if the signal is marked as 'immediate'
-        bool immediate = false;
-        auto it = signal_map.find(sig);
-        if (it != signal_map.end())
-        {
-            immediate = it->second.second;
-        }
+        // Filter our own wake-up signal (if you left it mapped)
+        if (sig == SIGUSR1)
+            continue;
 
-        // Invoke user-defined callback if it exists
+        // Skip any signal not in the map (i.e. UNKNOWN)
+        auto it = signal_map.find(sig);
+        if (it == signal_map.end())
+            continue;
+
+        // Now we know it’s one we really care about.
+        bool immediate = it->second.second;
+
+        // Invoke the user callback
         if (callback)
         {
 #ifdef DEBUG_SIGNAL_HANDLER
